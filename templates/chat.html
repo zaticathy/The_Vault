@@ -1,0 +1,659 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ZatiAfriVault — Secure Chat</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background: linear-gradient(135deg, #0a0a0a, #1a1a2e, #16213e);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Header */
+        .header {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 15px 30px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .header-logo {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .header-logo h1 {
+            font-size: 22px;
+            font-weight: 700;
+            background: linear-gradient(90deg, #00d4ff, #00ff88);
+            background-clip: text;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            letter-spacing: 2px;
+        }
+
+        .header-logo p {
+            color: rgba(255, 255, 255, 0.4);
+            font-size: 11px;
+            letter-spacing: 1px;
+        }
+
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .user-info {
+            text-align: right;
+        }
+
+        .user-info .name {
+            color: white;
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        .user-info .status {
+            color: #00ff88;
+            font-size: 11px;
+        }
+
+        .logout-btn {
+            padding: 8px 18px;
+            background: rgba(255, 50, 50, 0.1);
+            border: 1px solid rgba(255, 50, 50, 0.3);
+            border-radius: 8px;
+            color: #ff6b6b;
+            font-size: 13px;
+            cursor: pointer;
+            text-decoration: none;
+            transition: all 0.3s;
+        }
+
+        .logout-btn:hover {
+            background: rgba(255, 50, 50, 0.2);
+        }
+
+        /* Main Layout */
+        .main {
+            display: flex;
+            flex: 1;
+            height: calc(100vh - 70px);
+        }
+
+        /* Sidebar */
+        .sidebar {
+            width: 280px;
+            background: rgba(255, 255, 255, 0.03);
+            border-right: 1px solid rgba(255, 255, 255, 0.08);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .sidebar-header {
+            padding: 20px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        .sidebar-header h3 {
+            color: rgba(255, 255, 255, 0.6);
+            font-size: 12px;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            margin-bottom: 15px;
+        }
+
+        .room-input {
+            display: flex;
+            gap: 8px;
+        }
+
+        .room-input input {
+            flex: 1;
+            padding: 10px 14px;
+            background: rgba(255, 255, 255, 0.07);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            color: white;
+            font-size: 13px;
+            outline: none;
+        }
+
+        .room-input input::placeholder {
+            color: rgba(255, 255, 255, 0.3);
+        }
+
+        .room-input input:focus {
+            border-color: #00d4ff;
+        }
+
+        .join-btn {
+            padding: 10px 14px;
+            background: linear-gradient(90deg, #00d4ff, #00ff88);
+            border: none;
+            border-radius: 8px;
+            color: #0a0a0a;
+            font-size: 13px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .join-btn:hover {
+            opacity: 0.9;
+        }
+
+        .rooms-list {
+            padding: 15px;
+            flex: 1;
+            overflow-y: auto;
+        }
+
+        .rooms-list h4 {
+            color: rgba(255, 255, 255, 0.4);
+            font-size: 11px;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            margin-bottom: 10px;
+        }
+
+        .room-item {
+            padding: 12px 15px;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin-bottom: 5px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .room-item:hover {
+            background: rgba(255, 255, 255, 0.07);
+        }
+
+        .room-item.active {
+            background: rgba(0, 212, 255, 0.1);
+            border: 1px solid rgba(0, 212, 255, 0.2);
+        }
+
+        .room-item .room-icon {
+            font-size: 18px;
+        }
+
+        .room-item .room-name {
+            color: rgba(255, 255, 255, 0.8);
+            font-size: 14px;
+        }
+
+        .room-item.active .room-name {
+            color: #00d4ff;
+        }
+
+        /* Encryption Status */
+        .encryption-status {
+            padding: 15px 20px;
+            border-top: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        .enc-badge {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: rgba(0, 255, 136, 0.05);
+            border: 1px solid rgba(0, 255, 136, 0.2);
+            border-radius: 8px;
+            padding: 10px 14px;
+        }
+
+        .enc-dot {
+            width: 8px;
+            height: 8px;
+            background: #00ff88;
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.3; }
+            100% { opacity: 1; }
+        }
+
+        .enc-text {
+            color: #00ff88;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        /* Chat Area */
+        .chat-area {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .chat-header {
+            padding: 20px 25px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .chat-header h2 {
+            color: white;
+            font-size: 18px;
+        }
+
+        .chat-header p {
+            color: rgba(255, 255, 255, 0.4);
+            font-size: 12px;
+            margin-top: 3px;
+        }
+
+        .enc-indicator {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            background: rgba(0, 255, 136, 0.05);
+            border: 1px solid rgba(0, 255, 136, 0.2);
+            border-radius: 20px;
+            padding: 6px 14px;
+        }
+
+        .enc-indicator span {
+            color: #00ff88;
+            font-size: 12px;
+        }
+
+        /* Messages */
+        .messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 25px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .messages::-webkit-scrollbar {
+            width: 4px;
+        }
+
+        .messages::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        .messages::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 2px;
+        }
+
+        .message {
+            display: flex;
+            flex-direction: column;
+            max-width: 70%;
+        }
+
+        .message.own {
+            align-self: flex-end;
+            align-items: flex-end;
+        }
+
+        .message.other {
+            align-self: flex-start;
+            align-items: flex-start;
+        }
+
+        .message-sender {
+            color: rgba(255, 255, 255, 0.4);
+            font-size: 11px;
+            margin-bottom: 5px;
+            letter-spacing: 1px;
+        }
+
+        .message-bubble {
+            padding: 12px 18px;
+            border-radius: 18px;
+            font-size: 14px;
+            line-height: 1.5;
+        }
+
+        .message.own .message-bubble {
+            background: linear-gradient(135deg, #00d4ff, #0099cc);
+            color: white;
+            border-bottom-right-radius: 4px;
+        }
+
+        .message.other .message-bubble {
+            background: rgba(255, 255, 255, 0.08);
+            color: rgba(255, 255, 255, 0.9);
+            border-bottom-left-radius: 4px;
+        }
+
+        .message-enc {
+            color: rgba(255, 255, 255, 0.2);
+            font-size: 10px;
+            margin-top: 4px;
+            font-family: monospace;
+        }
+
+        .status-message {
+            text-align: center;
+            color: rgba(255, 255, 255, 0.3);
+            font-size: 12px;
+            padding: 5px;
+        }
+
+        .welcome-message {
+            text-align: center;
+            padding: 60px 20px;
+            color: rgba(255, 255, 255, 0.3);
+        }
+
+        .welcome-message h3 {
+            font-size: 20px;
+            margin-bottom: 10px;
+            color: rgba(255, 255, 255, 0.5);
+        }
+
+        /* Message Input */
+        .message-input-area {
+            padding: 20px 25px;
+            border-top: 1px solid rgba(255, 255, 255, 0.08);
+            display: flex;
+            gap: 12px;
+            align-items: center;
+        }
+
+        .message-input-area input {
+            flex: 1;
+            padding: 14px 20px;
+            background: rgba(255, 255, 255, 0.07);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 25px;
+            color: white;
+            font-size: 14px;
+            outline: none;
+            transition: all 0.3s;
+        }
+
+        .message-input-area input::placeholder {
+            color: rgba(255, 255, 255, 0.3);
+        }
+
+        .message-input-area input:focus {
+            border-color: #00d4ff;
+            background: rgba(0, 212, 255, 0.05);
+        }
+
+        .send-btn {
+            width: 50px;
+            height: 50px;
+            background: linear-gradient(135deg, #00d4ff, #00ff88);
+            border: none;
+            border-radius: 50%;
+            color: #0a0a0a;
+            font-size: 20px;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .send-btn:hover {
+            transform: scale(1.1);
+            box-shadow: 0 5px 20px rgba(0, 212, 255, 0.4);
+        }
+
+        .no-room {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            gap: 15px;
+            color: rgba(255, 255, 255, 0.3);
+        }
+
+        .no-room h2 {
+            font-size: 22px;
+            color: rgba(255, 255, 255, 0.5);
+        }
+
+        .no-room p {
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <div class="header">
+        <div class="header-logo">
+            <div>
+                <h1>🛡️ ZatiAfriVault</h1>
+                <p>SECURING UGANDA'S COMMUNICATION</p>
+            </div>
+        </div>
+        <div class="header-right">
+            <div class="user-info">
+                <div class="name">{{ username }}</div>
+                <div class="status">● Online — Encrypted</div>
+            </div>
+            <a href="/logout" class="logout-btn">Logout</a>
+        </div>
+    </div>
+
+    <!-- Main Layout -->
+    <div class="main">
+        <!-- Sidebar -->
+        <div class="sidebar">
+            <div class="sidebar-header">
+                <h3>Secure Rooms</h3>
+                <div class="room-input">
+                    <input
+                        type="text"
+                        id="roomInput"
+                        placeholder="Room name..."
+                    />
+                    <button class="join-btn" onclick="joinRoom()">Join</button>
+                </div>
+            </div>
+
+            <div class="rooms-list">
+                <h4>Available Rooms</h4>
+                <div class="room-item" onclick="switchRoom('general')">
+                    <span class="room-icon">🏢</span>
+                    <span class="room-name">General</span>
+                </div>
+                <div class="room-item" onclick="switchRoom('finance')">
+                    <span class="room-icon">💰</span>
+                    <span class="room-name">Finance</span>
+                </div>
+                <div class="room-item" onclick="switchRoom('legal')">
+                    <span class="room-icon">⚖️</span>
+                    <span class="room-name">Legal</span>
+                </div>
+                <div class="room-item" onclick="switchRoom('hr')">
+                    <span class="room-icon">👥</span>
+                    <span class="room-name">HR</span>
+                </div>
+                <div class="room-item" onclick="switchRoom('executives')">
+                    <span class="room-icon">🎯</span>
+                    <span class="room-name">Executives</span>
+                </div>
+                <div id="customRooms"></div>
+            </div>
+
+            <div class="encryption-status">
+                <div class="enc-badge">
+                    <div class="enc-dot"></div>
+                    <span class="enc-text">AES-256 Active</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Chat Area -->
+        <div class="chat-area" id="chatArea">
+            <div class="no-room">
+                <div style="font-size: 60px">🛡️</div>
+                <h2>Welcome to ZatiAfriVault</h2>
+                <p>Join a secure room to start communicating</p>
+                <p>All messages are AES-256 encrypted</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const socket = io();
+        const username = "{{ username }}";
+        let currentRoom = null;
+
+        function joinRoom() {
+            const roomName = document.getElementById('roomInput').value.trim();
+            if (roomName) {
+                addCustomRoom(roomName);
+                switchRoom(roomName);
+                document.getElementById('roomInput').value = '';
+            }
+        }
+
+        function addCustomRoom(name) {
+            const customRooms = document.getElementById('customRooms');
+            const existing = document.querySelector(`[data-room="${name}"]`);
+            if (!existing) {
+                const div = document.createElement('div');
+                div.className = 'room-item';
+                div.setAttribute('data-room', name);
+                div.onclick = () => switchRoom(name);
+                div.innerHTML = `
+                    <span class="room-icon">🔐</span>
+                    <span class="room-name">${name}</span>
+                `;
+                customRooms.appendChild(div);
+            }
+        }
+
+        function switchRoom(roomName) {
+            if (currentRoom) {
+                socket.emit('leave', { room: currentRoom });
+            }
+
+            document.querySelectorAll('.room-item').forEach(item => {
+                item.classList.remove('active');
+            });
+
+            const activeItem = document.querySelector(
+                `[data-room="${roomName}"], 
+                 .room-item:has(.room-name)`
+            );
+
+            currentRoom = roomName;
+            socket.emit('join', { room: roomName });
+
+            document.getElementById('chatArea').innerHTML = `
+                <div class="chat-header">
+                    <div>
+                        <h2>🔐 ${roomName.charAt(0).toUpperCase() + 
+                            roomName.slice(1)}</h2>
+                        <p>End-to-end encrypted secure room</p>
+                    </div>
+                    <div class="enc-indicator">
+                        <div class="enc-dot"></div>
+                        <span>AES-256 Encrypted</span>
+                    </div>
+                </div>
+                <div class="messages" id="messages">
+                    <div class="welcome-message">
+                        <h3>🛡️ Secure Room: ${roomName}</h3>
+                        <p>Messages in this room are end-to-end encrypted</p>
+                        <p>Only members of this room can read them</p>
+                    </div>
+                </div>
+                <div class="message-input-area">
+                    <input
+                        type="text"
+                        id="messageInput"
+                        placeholder="Type an encrypted message..."
+                        onkeypress="handleKeyPress(event)"
+                    />
+                    <button class="send-btn" onclick="sendMessage()">➤</button>
+                </div>
+            `;
+        }
+
+        function handleKeyPress(event) {
+            if (event.key === 'Enter') {
+                sendMessage();
+            }
+        }
+
+        function sendMessage() {
+            const input = document.getElementById('messageInput');
+            if (!input) return;
+            const message = input.value.trim();
+            if (message && currentRoom) {
+                socket.emit('send_message', {
+                    room: currentRoom,
+                    message: message
+                });
+                input.value = '';
+            }
+        }
+
+        socket.on('receive_message', function(data) {
+            const messages = document.getElementById('messages');
+            if (!messages) return;
+
+            const isOwn = data.username === username;
+            const div = document.createElement('div');
+            div.className = `message ${isOwn ? 'own' : 'other'}`;
+            div.innerHTML = `
+                <div class="message-sender">
+                    ${isOwn ? 'You' : data.username}
+                </div>
+                <div class="message-bubble">${data.message}</div>
+                <div class="message-enc">
+                    🔒 ${data.encrypted}
+                </div>
+            `;
+            messages.appendChild(div);
+            messages.scrollTop = messages.scrollHeight;
+        });
+
+        socket.on('status', function(data) {
+            const messages = document.getElementById('messages');
+            if (!messages) return;
+
+            const div = document.createElement('div');
+            div.className = 'status-message';
+            div.textContent = data.message;
+            messages.appendChild(div);
+            messages.scrollTop = messages.scrollHeight;
+        });
+
+        document.getElementById('roomInput').addEventListener(
+            'keypress', function(e) {
+            if (e.key === 'Enter') joinRoom();
+        });
+    </script>
+</body>
+</html>
