@@ -25,7 +25,9 @@ using military grade AES-256 encryption.
 | Encryption | AES-256 via Cryptography |
 | Password Hashing | Bcrypt |
 | Frontend | HTML, CSS, JavaScript |
-
+### Access
+Open your browser and go to:
+http://localhost:5000
 ## Target Market
 | Sector | Use Case |
 |--------|----------|
