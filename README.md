@@ -44,4 +44,5 @@ http://localhost:5000
 | Institution | Nkumba University |
 | Location | Uganda |
 | Email | zawori824@nkumbauniversity.ac.ug |
+Status: Still in process
 *ZatiAfriVault — Securing Uganda's Communication*
